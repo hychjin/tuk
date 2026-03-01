@@ -1,7 +1,9 @@
-'AIzaSyCOBtV8SKCpsamprXGG3q0rLT9V-eMKzn8'
 from google import genai 
 from PIL import Image
 import os
+import requests
+
+
 # 분류표 정의 (프롬프트에 포함될 내용)
 CLASSIFICATION_TABLE = """
 대분류 및 소분류 리스트:
@@ -11,7 +13,7 @@ CLASSIFICATION_TABLE = """
 4. 서류: 1.서류, 2.기타물품
 5. 쇼핑백: 1.쇼핑백
 6. 스포츠용품: 1.스포츠용품
-7. 악기: 건반악기, 1.타악기, 2.관악기, 3.현악기, 4.기타악기
+7. 악기: 1.건반악기, 2.타악기, 3.관악기, 4.현악기, 5.기타악기
 8. 유가증권: 1.어음, 2.상품권, 3.채권, 4.기타
 9. 의류: 1.여성의류, 2.남성의류, 3.아기의류, 4.모자, 5.신발, 6.기타의류
 10. 자동차: 1.자동차열쇠, 2.네비게이션, 3.자동차번호판, 4.임시번호판, 5.기타용품
@@ -23,56 +25,61 @@ CLASSIFICATION_TABLE = """
 16. 현금
 17. 휴대폰: 1.삼성휴대폰, 2.LG휴대폰, 3.아이폰, 4.기타휴대폰, 5.기타통신기기
 18. 기타물품
-19. 유류품: 1.무안공항유류품, 2.유류품
-20. 무주물: 무주물
 """
 
 def analyze_image_with_ai(image_path, user_prompt):
-    # API 클라이언트 설정 (API 키)
-    client = genai.Client(api_key="AIzaSyCOBtV8SKCpsamprXGG3q0rLT9V-eMKzn8")
+    client = genai.Client(api_key="AIzaSyAGgsdPadhnI5dTYsnpaaDLP0qSstj2SP0")
     
-    # 이미지 파일 확인 및 로드
     if not os.path.isfile(image_path):
-        print(f"오류: '{image_path}' 파일이 존재하지 않습니다. 경로를 확인하세요.")
+        print(f"오류: '{image_path}' 파일이 존재하지 않습니다.")
         return None
     try:
         img = Image.open(image_path)
-    except Exception as e:
-        print(f"이미지 로드 중 오류 발생: {e}")
-        return None
-
-    # AI에 분석 요청
-    try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash", 
+            model="gemini-2.5-flash", 
             contents=[user_prompt, img]
         )
-        return response.text
+        return response.text.strip()
     except Exception as e:
         print(f"AI 분석 중 오류 발생: {e}")
         return None
 
-if __name__ == "__main__":
-    image_file = "/Users/jin/Desktop/example/opencv/output.jpg" 
-    'prompt = "이 이미지 안에 있는 객체들을 탐지하고, 무엇인지 설명해줘."'
-    # AI 지시사항
-    prompt = f"""
-    너는 분실물 분류 전문가야. 다음 규칙에 따라 이미지를 분석해줘:
-    1. 아래 제공된 [대분류 및 소분류 리스트]에서만 선택할 것.
-    2. 출력 형식은 반드시 '대분류번호. 소분류번호' 형식으로 한 줄만 출력할 것. 
-       (예: 11.3)
-    3. 만약 소분류가 없는 항목(예: 16. 현금)은 '번호.' 으로 출력할 것.
-    4. 확실하지 않다면 해당 대분류의 '기타' 항목을 선택할 것.
+# 서버 전송 
+def send_to_server(major_name, sub_name, image_path):
+    server_url = "http://localhost:3000/api/analysis"
+    payload = {
+        "major_name": major_name,
+        "sub_name": sub_name,
+        "image_path": os.path.abspath(image_path)
+    }
+    
+    try:
+        response = requests.post(server_url, json=payload)
+        if response.status_code == 200:
+            print(f"서버 저장 성공: {major_name} > {sub_name}")
+        else:
+            print(f"서버 전송 실패: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"네트워크 오류: {e}")
 
-    [대분류 및 소분러 리스트]
+if __name__ == "__main__":
+    image_file = "/Users/jin/Desktop/example/sorter/output.jpg" 
+    
+    # 프롬프트 
+    prompt = f"""
+    다음 규칙에 따라 이미지를 분석해줘:
+    1. 아래 [리스트]에서 '대분류'와 '소분류' 명칭을 선택할 것.
+    2. 출력 형식: '대분류이름.소분류이름' (예: 지갑.남성용지갑)
+    3. 소분류가 없으면 '현금.' 처럼 마침표로 끝낼 것.
+    [리스트]
     {CLASSIFICATION_TABLE}
     """
+    
     result = analyze_image_with_ai(image_file, prompt)
     
-    if result:
-        print("\n--- AI 분석 결과 ---")
-        print(result)
-        
-    # 파일로 저장
-    with open("sort_result.txt", "w", encoding="utf-8") as f:
-        f.write(result)
+    if result and "." in result:
+        # 결과 파싱 및 서버 전송 호출
+        major, sub = result.split(".", 1)
+        send_to_server(major.strip(), sub.strip(), image_file)
+    else:
+        print("분석 결과 형식이 올바르지 않습니다:", result)
