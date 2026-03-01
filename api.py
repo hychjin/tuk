@@ -28,7 +28,7 @@ CLASSIFICATION_TABLE = """
 """
 
 def analyze_image_with_ai(image_path, user_prompt):
-    client = genai.Client(api_key="AIzaSyAGgsdPadhnI5dTYsnpaaDLP0qSstj2SP0")
+    client = genai.Client(api_key="")
     
     if not os.path.isfile(image_path):
         print(f"오류: '{image_path}' 파일이 존재하지 않습니다.")
@@ -36,7 +36,7 @@ def analyze_image_with_ai(image_path, user_prompt):
     try:
         img = Image.open(image_path)
         response = client.models.generate_content(
-            model="gemini-2.5-flash", 
+            model="gemini-2.0-flash", 
             contents=[user_prompt, img]
         )
         return response.text.strip()

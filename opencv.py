@@ -4,7 +4,7 @@ import sys
 import numpy as np
 
 def crop_image(image_path):
-    # 1. 이미지 로드
+    # 이미지 로드
     img = cv2.imread(image_path)
     if img is None:
         return None
@@ -12,8 +12,7 @@ def crop_image(image_path):
     height, width = img.shape[:2]
     print(f"원본 크기: {width}x{height}")
 
-    # 정중앙 크롭
-    #중심점을 기준으로 가로세로 400px씩 잘라내기
+    # 중심점을 기준으로 가로세로 400px씩 잘라내기
     # crop_w, crop_h = 200, 200
     
     # start_x = max(0, width // 2 - crop_w // 2)
@@ -25,7 +24,7 @@ def crop_image(image_path):
     
     # cv2.imwrite("output.jpg", center_cropped)
     
-    # print("크롭 완료: output.jpg 저장됨.")
+    # print("크롭 완료: output.jpg으로 저장.")
     # return center_cropped
 
 if __name__ == "__main__":
